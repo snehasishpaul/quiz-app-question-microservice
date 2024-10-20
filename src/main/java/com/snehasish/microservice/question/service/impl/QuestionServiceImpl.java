@@ -1,6 +1,7 @@
 package com.snehasish.microservice.question.service.impl;
 
 import com.snehasish.microservice.question.dto.QuestionDto;
+import com.snehasish.microservice.question.dto.QuizResponse;
 import com.snehasish.microservice.question.dto.Response;
 import com.snehasish.microservice.question.entity.Question;
 import com.snehasish.microservice.question.exception.NotFoundException;
@@ -12,7 +13,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -60,6 +63,16 @@ public class QuestionServiceImpl implements QuestionService {
             log.info(e.getMessage());
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    @Override
+    public Response<List<QuestionDto>> getQuestionsByCategory(String category) {
+        List<Question> questions = this.questionRepository.findByCategoryIgnoreCase(category);
+        List<QuestionDto> questionDtoList = questions.stream().map((question -> this.modelMapper.map(question, QuestionDto.class))).toList();
+        return Response.<List<QuestionDto>>builder()
+                .content(questionDtoList)
+                .status(HttpStatus.OK)
+                .build();
     }
 
     @Override
@@ -112,4 +125,60 @@ public class QuestionServiceImpl implements QuestionService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    @Override
+    public Response<List<Long>> generateQuestionsForQuiz(String category, Integer numOfQuestions) {
+        List<Long> randomQuestionsForQuiz = questionRepository.getRandomQuestionIdsForQuiz(category, numOfQuestions);
+        return Response.<List<Long>>builder()
+                .content(randomQuestionsForQuiz)
+                .message("Successfully created quiz with " + numOfQuestions + " of questions")
+                .status(HttpStatus.OK)
+                .build();
+    }
+
+    @Override
+    public Response<List<QuestionDto>> getQuestionsFromIds(List<Long> ids) {
+        List<QuestionDto> questionWrapperList = new ArrayList<>();
+        List<Question> questionList = new ArrayList<>();
+
+        for (Long questionId : ids) {
+            Question question = this.questionRepository.findById(questionId).orElseThrow(() -> new NotFoundException("question id not found: " + questionId));
+            questionList.add(question);
+        }
+
+        for (Question question : questionList) {
+            QuestionDto questionWrapper = new QuestionDto();
+            questionWrapper.setId(question.getId());
+            questionWrapper.setQuestion(question.getQuestion());
+            questionWrapper.setOption1(question.getOption1());
+            questionWrapper.setOption2(question.getOption2());
+            questionWrapper.setOption3(question.getOption3());
+            questionWrapper.setOption4(question.getOption4());
+            questionWrapper.setCategory(question.getCategory());
+            questionWrapperList.add(questionWrapper);
+        }
+
+        return Response.<List<QuestionDto>>builder()
+                .content(questionWrapperList)
+                .message("questions fetched successfully")
+                .status(HttpStatus.OK)
+                .build();
+    }
+
+    @Override
+    public Response<Integer> getScore(List<QuizResponse> quizResponses) {
+        int right = 0;
+        for (QuizResponse res : quizResponses) {
+            Question question = this.questionRepository.findById(res.getId()).orElseThrow(() -> new NotFoundException("question not found with id: " + res.getId()));
+            if (res.getResponse().equals(question.getAnswer())) {
+                right++;
+            }
+        }
+        return Response.<Integer>builder()
+                .content(right)
+                .message("Your score: " + right)
+                .status(HttpStatus.OK)
+                .build();
+    }
+
 }
