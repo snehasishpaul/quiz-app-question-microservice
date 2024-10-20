@@ -131,7 +131,7 @@ public class QuestionServiceImpl implements QuestionService {
         List<Long> randomQuestionsForQuiz = questionRepository.getRandomQuestionIdsForQuiz(category, numOfQuestions);
         return Response.<List<Long>>builder()
                 .content(randomQuestionsForQuiz)
-                .message("Successfully created quiz with " + numOfQuestions + " of questions")
+                .message("Successfully created quiz with " + numOfQuestions + " questions")
                 .status(HttpStatus.OK)
                 .build();
     }

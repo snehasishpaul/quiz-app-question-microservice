@@ -13,7 +13,7 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     List<Question> findByCategoryIgnoreCase(String category);
 
-    @Query(value = "SELECT q.id FROM Question q WHERE q.category = :category ORDER BY RANDOM() LIMIT :numOfQuestions")
+    @Query(value = "SELECT q.id FROM Question q WHERE LOWER(q.category) = LOWER(:category) ORDER BY RANDOM() LIMIT :numOfQuestions")
     List<Long> getRandomQuestionIdsForQuiz(@Param("category") String category, @Param("numOfQuestions") Integer numOfQuestions);
 
 }
